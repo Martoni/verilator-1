@@ -30,3 +30,7 @@ verilator_bin*
 verilator_coverage_bin*
 verilator.pc
 **/obj_dir/*
+build
+antlr_runtime/dist
+antlr_runtime/build
+
