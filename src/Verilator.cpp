@@ -91,7 +91,9 @@
 #include "V3Undriven.h"
 #include "V3Unknown.h"
 #include "V3Unroll.h"
+#include "V4VhdlParser.h"
 #include "V3Width.h"
+
 
 V3Global v3Global;
 
@@ -125,6 +127,14 @@ void V3Global::readFiles() {
 	string filename = *it;
 	parser.parseFile(new FileLine("COMMAND_LINE",0), filename, false,
 			 "Cannot find file containing module: ");
+    }
+
+    V4VhdlParser vhdParser;
+    // Read top VHDL module
+    const V3StringList& vhdFiles = v3Global.opt.vhdFiles();
+    for (V3StringList::const_iterator it = vhdFiles.begin(); it != vhdFiles.end(); ++it) {
+  string filename = *it;
+  vhdParser.parseFile(*it);
     }
 
     // Read libraries
