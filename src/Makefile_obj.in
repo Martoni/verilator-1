@@ -60,7 +60,7 @@ pkgdatadir = @pkgdatadir@
 CFG_WITH_CCWARN = @CFG_WITH_CCWARN@
 CFG_WITH_DEFENV = @CFG_WITH_DEFENV@
 CPPFLAGS += @CPPFLAGS@
-LDFLAGS += @LDFLAGS@ -L$(srcdir)/antlr_runtime/dist
+LDFLAGS += @LDFLAGS@
 EXEEXT = @EXEEXT@
 CFG_CXXFLAGS_SRC = @CFG_CXXFLAGS_SRC@
 CFG_CXXFLAGS_PARSER = @CFG_CXXFLAGS_PARSER@
@@ -90,7 +90,7 @@ endif
 
 # -lfl not needed as Flex invoked with %nowrap option
 # -lstdc++ needed for clang, believed harmless with gcc
-LIBS = -lm -lstdc++ -lantlr4-runtime
+LIBS = -lm -lstdc++
 
 CPPFLAGS += -MMD
 CPPFLAGS += -I. -I$(bldsrc) -I$(srcdir) -I$(incdir) -I$(srcdir)/antlr_runtime/runtime/src
@@ -265,7 +265,7 @@ V3__CONCAT.cpp: $(addsuffix .cpp, $(basename $(RAW_OBJS)))
 $(TGT): $(PREDEP_H) $(OBJS)
 	@echo "      Linking $@..."
 	-rm -rf $@ $@.exe
-	${LINK} ${LDFLAGS} -o $@ $(OBJS) $(CCMALLOC) ${LIBS}
+	${LINK} ${LDFLAGS} -o $@ $(OBJS) $(srcdir)/antlr_runtime/dist/libantlr4-runtime.a $(CCMALLOC) ${LIBS}
 
 V3Number_test: V3Number_test.o
 	${LINK} ${LDFLAGS} -o $@ $^ ${LIBS}
