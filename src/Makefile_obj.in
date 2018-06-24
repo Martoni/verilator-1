@@ -60,7 +60,7 @@ pkgdatadir = @pkgdatadir@
 CFG_WITH_CCWARN = @CFG_WITH_CCWARN@
 CFG_WITH_DEFENV = @CFG_WITH_DEFENV@
 CPPFLAGS += @CPPFLAGS@
-LDFLAGS += @LDFLAGS@
+LDFLAGS += @LDFLAGS@ -L$(srcdir)/antlr_runtime/dist
 EXEEXT = @EXEEXT@
 CFG_CXXFLAGS_SRC = @CFG_CXXFLAGS_SRC@
 CFG_CXXFLAGS_PARSER = @CFG_CXXFLAGS_PARSER@
@@ -90,10 +90,10 @@ endif
 
 # -lfl not needed as Flex invoked with %nowrap option
 # -lstdc++ needed for clang, believed harmless with gcc
-LIBS = -lm -lstdc++
+LIBS = -lm -lstdc++ -lantlr4-runtime
 
 CPPFLAGS += -MMD
-CPPFLAGS += -I. -I$(bldsrc) -I$(srcdir) -I$(incdir)
+CPPFLAGS += -I. -I$(bldsrc) -I$(srcdir) -I$(incdir) -I$(srcdir)/antlr_runtime/runtime/src
 CPPFLAGS += -DYYDEBUG 	# Required to get nice error messages
 #CPPFLAGS += -DVL_LEAK_CHECKS 	# If running valgrind or other hunting tool
 CPPFLAGS += $(COPT)
@@ -238,6 +238,12 @@ RAW_OBJS = \
 	V4VhdlParser.o \
 	V3WidthSel.o \
 
+VHDL_OBJS += \
+  vhdlLexer.o \
+  vhdlParser.o \
+  vhdlVisitor.o \
+  vhdlBaseVisitor.o \
+
 # Non-concatable
 NC_OBJS += \
 	V3ParseImp.o \
@@ -253,7 +259,7 @@ VLCOV_OBJS = \
 
 ifeq ($(VL_VLCOV),)
 PREDEP_H = V3Ast__gen_classes.h
-OBJS += $(RAW_OBJS) $(NC_OBJS)
+OBJS += $(RAW_OBJS) $(NC_OBJS) $(VHDL_OBJS)
 else
 PREDEP_H =
 OBJS += $(VLCOV_OBJS)
@@ -277,6 +283,8 @@ V3Number_test: V3Number_test.o
 
 %.o:	%.cpp
 	$(OBJCACHE) ${CXX} ${CPPFLAGSWALL} -c $<
+%.o:	vhdl_parser/%.cpp
+	$(OBJCACHE) ${CXX} ${CPPFLAGSWALL} -std=gnu++11 -c $<
 %.o:	%.c
 	$(OBJCACHE) ${CC}  ${CPPFLAGSWALL} -c $<
 
