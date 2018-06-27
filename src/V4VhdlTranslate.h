@@ -37,7 +37,6 @@ public:
 
       FileLine *flType = new FileLine(m_filename, port->value->getLine());
       AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
-      m_currentModule->addStmtp(dtypep);
 
       FileLine *flVar = new FileLine(m_filename, port->value->getLine());
       AstVar *varp;
@@ -51,6 +50,7 @@ public:
         varp = new AstVar(flVar, AstVarType::OUTPUT, portName, dtypep);
       else if(ctx->signal_mode()->LINKAGE())
         varp = new AstVar(flVar, AstVarType::INOUT, portName, dtypep);
+      varp->childDTypep(dtypep);
 
       m_currentModule->addStmtp(varp);
     }
