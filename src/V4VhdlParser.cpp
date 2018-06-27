@@ -1,4 +1,9 @@
 #include "V4VhdlParser.h"
+#include "V4VhdlTranslate.h"
+
+V4VhdlParser::V4VhdlParser(AstNetlist* rootp) {
+  m_rootp = rootp;
+}
 
 void V4VhdlParser::parseFile(const string& filename) {
   cout << "Parsing " << filename << endl;
@@ -16,5 +21,6 @@ void V4VhdlParser::parseFile(const string& filename) {
   vhdlParser parser(&tokens);
   tree::ParseTree* tree = parser.design_file();
 
-  cout << tree->toStringTree(&parser) << endl << endl;
+  VhdlTranslateVisitor vhdlTranslate(filename, m_rootp);
+  vhdlTranslate.visitDesign_file((vhdlParser::Design_fileContext*)tree);
 }

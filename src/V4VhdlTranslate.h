@@ -36,7 +36,7 @@ public:
       m_currentModule->addStmtp(portp);
 
       FileLine *flType = new FileLine(m_filename, port->value->getLine());
-      AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::LOGIC_IMPLICIT);
+      AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
       FileLine *flVar = new FileLine(m_filename, port->value->getLine());
       AstVar *varp;
       if (ctx->signal_mode()->IN())

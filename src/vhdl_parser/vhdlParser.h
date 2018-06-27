@@ -2212,6 +2212,7 @@ public:
 
   class  IdentifierContext : public antlr4::ParserRuleContext {
   public:
+    antlr4::Token *value = nullptr;;
     IdentifierContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *BASIC_IDENTIFIER();
@@ -2225,6 +2226,8 @@ public:
 
   class  Identifier_listContext : public antlr4::ParserRuleContext {
   public:
+    vhdlParser::IdentifierContext *identifierContext = nullptr;;
+    std::vector<IdentifierContext *> id_lst;;
     Identifier_listContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     std::vector<IdentifierContext *> identifier();
@@ -2422,6 +2425,8 @@ public:
 
   class  Interface_port_listContext : public antlr4::ParserRuleContext {
   public:
+    vhdlParser::Interface_port_declarationContext *interface_port_declarationContext = nullptr;;
+    std::vector<Interface_port_declarationContext *> itf_port;;
     Interface_port_listContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     std::vector<Interface_port_declarationContext *> interface_port_declaration();

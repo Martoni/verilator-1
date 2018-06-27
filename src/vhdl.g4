@@ -781,12 +781,12 @@ guarded_signal_specification
   ;
 
 identifier
-  : BASIC_IDENTIFIER
-  | EXTENDED_IDENTIFIER
+  : value=BASIC_IDENTIFIER
+  | value=EXTENDED_IDENTIFIER
   ;
 
 identifier_list
-  : identifier ( COMMA identifier )*
+  : id_lst+=identifier ( COMMA id_lst+=identifier)*
   ;
 
 if_statement
@@ -849,7 +849,7 @@ interface_signal_list
   ;
 
 interface_port_list
-  : interface_port_declaration ( SEMI interface_port_declaration )*
+  : itf_port+=interface_port_declaration ( SEMI itf_port+=interface_port_declaration )*
   ;
 
 interface_list

@@ -129,7 +129,7 @@ void V3Global::readFiles() {
 			 "Cannot find file containing module: ");
     }
 
-    V4VhdlParser vhdParser;
+    V4VhdlParser vhdParser(v3Global.rootp());
     // Read top VHDL module
     const V3StringList& vhdFiles = v3Global.opt.vhdFiles();
     for (V3StringList::const_iterator it = vhdFiles.begin(); it != vhdFiles.end(); ++it) {
