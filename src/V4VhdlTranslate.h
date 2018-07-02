@@ -101,8 +101,6 @@ public:
   }
 
   virtual antlrcpp::Any visitExpression(vhdlParser::ExpressionContext *ctx) override {
-    return visitRelation(ctx->relation()[0]);
-
     if (ctx->logical_operator()[0]->AND()) {
       FileLine *fl = new FileLine(m_filename, 0);
       return (AstNode*) new AstAnd(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
@@ -125,6 +123,8 @@ public:
     } else if (ctx->logical_operator()[0]->XNOR()) {
       FileLine *fl = new FileLine(m_filename, 0);
       return (AstNode*) new AstXnor(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
+    } else {
+      return visitRelation(ctx->relation()[0]);
     }
   }
 
