@@ -19,12 +19,10 @@ public:
     AstModule *modulep = new AstModule(fl, ctx->identifier().at(0)->value->getText());
     m_currentModule = modulep;
     m_rootp->addModulep(modulep);
-    cout << "Declaration " << ctx->identifier().at(0)->value->getText() << " At line " << ctx->identifier().front()->value->getLine() << endl;
     return visitChildren(ctx);
   }
 
   virtual antlrcpp::Any visitArchitecture_body(vhdlParser::Architecture_bodyContext *ctx) override {
-    cout << "Architecture " << ctx->identifier().at(0)->value->getText() << " of " << ctx->identifier().at(1)->value->getText() <<" At line " << ctx->identifier().front()->value->getLine() << endl;
     return visitChildren(ctx);
   }
 
@@ -148,11 +146,28 @@ public:
     return visitPrimary(ctx->primary()[0]);
   }
 
+  uint32_t interpretEnumerationLiteral(string inStr) {
+    string character = inStr.substr(1, 1);
+    if (character == "0")
+      return 0;
+    else if (character == "1")
+      return 1;
+    else
+      return 0;
+  }
+
   virtual antlrcpp::Any visitPrimary(vhdlParser::PrimaryContext *ctx) override {
-    FileLine *fl = new FileLine(m_filename, 0);
-    string targetName = ctx->literal()->enumeration_literal()->identifier()->value->getText();
-    cout << "Primary " << targetName << endl;
-    return (AstNode*) new AstVarRef(fl, targetName, false);
+    if (ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      uint32_t constValue = interpretEnumerationLiteral(ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()->getText());
+      FileLine *flNumber = new FileLine(m_filename, 0);
+      const V3Number value(flNumber, 1, constValue);
+      return (AstNode*) new AstConst(fl, value);
+    } else {
+      FileLine *fl = new FileLine(m_filename, 0);
+      string targetName = ctx->literal()->enumeration_literal()->identifier()->value->getText();
+      return (AstNode*) new AstVarRef(fl, targetName, false);
+    }
   }
 
 private:
