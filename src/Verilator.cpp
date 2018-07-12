@@ -91,6 +91,7 @@
 #include "V3Undriven.h"
 #include "V3Unknown.h"
 #include "V3Unroll.h"
+#include "V4VhdlSymtable.h"
 #include "V4VhdlParser.h"
 #include "V3Width.h"
 
@@ -129,7 +130,8 @@ void V3Global::readFiles() {
 			 "Cannot find file containing module: ");
     }
 
-    V4VhdlParser vhdParser(v3Global.rootp());
+    VhdlScopeTable vhdlScopeTable;
+    V4VhdlParser vhdParser(v3Global.rootp(), &vhdlScopeTable);
     // Read top VHDL module
     const V3StringList& vhdFiles = v3Global.opt.vhdFiles();
     for (V3StringList::const_iterator it = vhdFiles.begin(); it != vhdFiles.end(); ++it) {

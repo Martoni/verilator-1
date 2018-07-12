@@ -1,6 +1,7 @@
 #ifndef _V4VHDLTRANSLATE_H_
 #define _V4VHDLTRANSLATE_H_
 
+#include "V4VhdlSymtable.h"
 #include "vhdl_parser/vhdlBaseVisitor.h"
 #include "V3Ast.h"
 #include <iostream>
@@ -8,10 +9,11 @@ using namespace std;
 
 class VhdlTranslateVisitor: public vhdlBaseVisitor{
 public:
-  VhdlTranslateVisitor(const string &filename, AstNetlist *root) {
+  VhdlTranslateVisitor(const string &filename, AstNetlist *root, VhdlScopeTable *scopeTable) {
     m_filename = filename;
     m_rootp = root;
     pinNumber = 0;
+    m_scopeTable = scopeTable;
   }
 
   virtual antlrcpp::Any visitEntity_declaration(vhdlParser::Entity_declarationContext *ctx) override {
@@ -29,6 +31,7 @@ public:
   virtual antlrcpp::Any visitInterface_port_declaration(vhdlParser::Interface_port_declarationContext *ctx) override {
     for(auto port : ctx->identifier_list()->id_lst) {
       string portName = port->value->getText();
+      m_scopeTable->addItem(new VhdlScope(portName));
       FileLine *flPort = new FileLine(m_filename, port->value->getLine());
       AstPort *portp = new AstPort(flPort, pinNumber++, portName);
       m_currentModule->addStmtp(portp);
@@ -50,6 +53,7 @@ public:
         varp = new AstVar(flVar, AstVarType::INOUT, portName, dtypep);
       varp->childDTypep(dtypep);
 
+
       m_currentModule->addStmtp(varp);
     }
     return visitChildren(ctx);
@@ -58,6 +62,7 @@ public:
   virtual antlrcpp::Any visitSignal_declaration(vhdlParser::Signal_declarationContext *ctx) override {
     for(auto sig : ctx->identifier_list()->id_lst) {
       string sigName = sig->value->getText();
+      m_scopeTable->addItem(new VhdlScope(sigName));
 
       FileLine *flType = new FileLine(m_filename, 0);
       AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
@@ -77,6 +82,16 @@ public:
     for(auto cst : ctx->identifier_list()->id_lst) {
       string cstName = cst->value->getText();
       cout << "Constant " << cstName << endl;
+
+      FileLine *flType = new FileLine(m_filename, 0);
+      AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
+
+      FileLine *flVar = new FileLine(m_filename, 0);
+      AstVar *varp = new AstVar(flVar, AstVarType::VAR, cstName, dtypep);
+      varp->childDTypep(dtypep);
+
+      m_currentModule->addStmtp(varp);
+
     }
     return visitChildren(ctx);
   }
@@ -100,6 +115,10 @@ public:
       cout << "Target " << ctx->name()->identifier()->value->getLine() << endl;
       FileLine *fl = new FileLine(m_filename, ctx->name()->identifier()->value->getLine());
       string targetName =  ctx->name()->identifier()->value->getText();
+      if (!m_scopeTable->searchItem(targetName)) {
+        cout << "Error: could not find " << targetName << endl;
+        exit(-1);
+      }
       return (AstNode*) new AstVarRef(fl, targetName, true);
     }
   }
@@ -177,6 +196,10 @@ public:
     } else {
       FileLine *fl = new FileLine(m_filename, 0);
       string targetName = ctx->literal()->enumeration_literal()->identifier()->value->getText();
+      if (!m_scopeTable->searchItem(targetName)) {
+        cout << "Error: could not find " << targetName << endl;
+        exit(-1);
+      }
       return (AstNode*) new AstVarRef(fl, targetName, false);
     }
   }
@@ -186,7 +209,7 @@ private:
   AstNetlist *m_rootp;
   long pinNumber;
   AstModule *m_currentModule;
-
+  VhdlScopeTable *m_scopeTable;
 };
 
 #endif
