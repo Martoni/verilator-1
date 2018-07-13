@@ -80,8 +80,12 @@ private:
 
 public:
   VhdlScopeTable() {
-    addItem(new VhdlTypeScope("std_logic", NULL, false));
-    addItem(new VhdlTypeScope("std_ulogic", NULL, false));
+    VhdlScope *slu = new VhdlTypeScope("std_ulogic", NULL, false);
+    addItem(slu);
+
+    VhdlScope *sl = new VhdlTypeScope("std_logic", slu, false);
+    addItem(sl);
+
     /*addItem(new VhdlScope("_fn_and_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_or_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_xor_std__logic_std__logic_std__logic"));
