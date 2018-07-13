@@ -31,7 +31,15 @@ public:
   virtual antlrcpp::Any visitInterface_port_declaration(vhdlParser::Interface_port_declarationContext *ctx) override {
     for(auto port : ctx->identifier_list()->id_lst) {
       string portName = port->value->getText();
-      m_scopeTable->addItem(new VhdlScope(portName));
+
+      string typeName = visitSelected_name(ctx->subtype_indication()->selected_name()[0]);
+      VhdlScope *type = m_scopeTable->searchType(typeName);
+      if (!type) {
+        cout << "Error: " << typeName << " does not name a type" << endl;
+        exit(-1);
+      }
+
+      m_scopeTable->addItem(new VhdlVarScope(portName, type));
       FileLine *flPort = new FileLine(m_filename, port->value->getLine());
       AstPort *portp = new AstPort(flPort, pinNumber++, portName);
       m_currentModule->addStmtp(portp);
@@ -62,7 +70,15 @@ public:
   virtual antlrcpp::Any visitSignal_declaration(vhdlParser::Signal_declarationContext *ctx) override {
     for(auto sig : ctx->identifier_list()->id_lst) {
       string sigName = sig->value->getText();
-      m_scopeTable->addItem(new VhdlScope(sigName));
+
+      string typeName = visitSelected_name(ctx->subtype_indication()->selected_name()[0]);
+      VhdlScope *type = m_scopeTable->searchType(typeName);
+      if (!type) {
+        cout << "Error: " << typeName << " does not name a type" << endl;
+        exit(-1);
+      }
+
+      m_scopeTable->addItem(new VhdlVarScope(sigName, type));
 
       FileLine *flType = new FileLine(m_filename, 0);
       AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
@@ -130,8 +146,7 @@ public:
   virtual antlrcpp::Any visitExpression(vhdlParser::ExpressionContext *ctx) override {
     if (not ctx->logical_operator().size())
       return visitRelation(ctx->relation()[0]);
-
-    if (ctx->logical_operator()[0]->AND()) {
+    else if (ctx->logical_operator()[0]->AND()) {
       FileLine *fl = new FileLine(m_filename, 0);
       return (AstNode*) new AstAnd(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
     } else if (ctx->logical_operator()[0]->OR()) {
@@ -174,6 +189,10 @@ public:
 
   virtual antlrcpp::Any visitFactor(vhdlParser::FactorContext *ctx) override {
     return visitPrimary(ctx->primary()[0]);
+  }
+
+  virtual antlrcpp::Any visitSelected_name(vhdlParser::Selected_nameContext *ctx) override {
+    return ctx->identifier()->value->getText();
   }
 
   uint32_t interpretEnumerationLiteral(string inStr) {
