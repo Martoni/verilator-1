@@ -14,21 +14,29 @@
 using namespace std;
 
 class VhdlScope {
-private:
+protected:
   string m_name; // Item name
+
+  string escapeName(string name) {
+    regex original("_");
+    return regex_replace(name, original, "__");
+  }
 
 public:
   VhdlScope(string name) {
     m_name = name;
   }
 
+  typedef AstNode*(*translationFnType)(FileLine*);
+
+  virtual string mangled_name() = 0;
+
   virtual string to_string() {
     return m_name;
   }
 
-  virtual string getItemClass() {
-    return "";
-  }
+  virtual string getItemClass() = 0;
+  virtual AstNode *translate() = 0;
 };
 
 class VhdlVarScope : public VhdlScope {
@@ -37,12 +45,20 @@ public:
     m_type = type;
   }
 
+  virtual string mangled_name() {
+    return escapeName(m_name);
+  }
+
   VhdlScope *getType() {
     return m_type;
   }
 
   virtual string getItemClass() {
     return "";
+  }
+
+  virtual AstNode *translate() {
+    return NULL;
   }
 
 private:
@@ -56,6 +72,10 @@ public:
     m_isArray = isArray;
   }
 
+  virtual string mangled_name() {
+    return getItemClass() + escapeName(m_name);
+  }
+
   VhdlScope *getParentType() {
     return m_parent_type;
   }
@@ -64,9 +84,48 @@ public:
     return "_type_";
   }
 
+  virtual AstNode *translate() {
+    return NULL;
+  }
+
 private:
     VhdlScope *m_parent_type;
     bool m_isArray;
+};
+
+class VhdlFnScope : public VhdlScope {
+public:
+  VhdlFnScope(string name, VhdlTypeScope *return_type, VhdlTypeScope **params_type, unsigned int params_count) : VhdlScope(name) {
+    m_return_type = return_type;
+    m_params_type = params_type;
+    m_params_count = params_count;
+  }
+
+  virtual string mangled_name() {
+    string mangle_name = getItemClass() + escapeName(m_name);
+    mangle_name += "_" + escapeName(m_return_type->to_string());
+    for (int i=0; i < m_params_count; i++) {
+      mangle_name += "_" + escapeName(m_params_type[i]->to_string());
+    }
+    return mangle_name;
+  }
+
+  virtual string to_string() {
+    return m_name;
+  }
+
+  virtual string getItemClass() {
+    return "_fn_";
+  }
+
+  virtual AstNode *translate() {
+    return NULL;
+  }
+
+private:
+    VhdlTypeScope *m_return_type;
+    VhdlTypeScope **m_params_type;
+    unsigned int m_params_count;
 };
 
 class VhdlScopeTable {
@@ -80,43 +139,44 @@ private:
 
 public:
   VhdlScopeTable() {
-    VhdlScope *slu = new VhdlTypeScope("std_ulogic", NULL, false);
+    auto slu = new VhdlTypeScope("std_ulogic", NULL, false);
     addItem(slu);
 
-    VhdlScope *sl = new VhdlTypeScope("std_logic", slu, false);
+    auto sl = new VhdlTypeScope("std_logic", slu, false);
     addItem(sl);
 
-    VhdlScope *slv = new VhdlTypeScope("std_logic_vector", sl, true);
+    auto slv = new VhdlTypeScope("std_logic_vector", sl, true);
     addItem(slv);
 
-    VhdlScope *sluv = new VhdlTypeScope("std_ulogic_vector", sl, true);
+    auto sluv = new VhdlTypeScope("std_ulogic_vector", sl, true);
     addItem(sluv);
 
-    VhdlScope *sig = new VhdlTypeScope("signed", sl, true);
+    auto sig = new VhdlTypeScope("signed", sl, true);
     addItem(sig);
 
-    VhdlScope *unsig = new VhdlTypeScope("unsigned", sl, true);
+    auto unsig = new VhdlTypeScope("unsigned", sl, true);
     addItem(unsig);
 
-    /*addItem(new VhdlScope("_fn_and_std__logic_std__logic_std__logic"));
-    addItem(new VhdlScope("_fn_or_std__logic_std__logic_std__logic"));
-    addItem(new VhdlScope("_fn_xor_std__logic_std__logic_std__logic"));
-    addItem(new VhdlScope("_fn_nand_std__logic_std__logic_std__logic"));
-    addItem(new VhdlScope("_fn_nor_std__logic_std__logic_std__logic"));
-    addItem(new VhdlScope("_fn_xnor_std__logic_std__logic_std__logic")); */
+    VhdlTypeScope* sl_sl[] = {sl, sl};
+    addItem(new VhdlFnScope("and", sl, sl_sl, 2));
+    addItem(new VhdlFnScope("or", sl, sl_sl, 2));
+    addItem(new VhdlFnScope("xor", sl, sl_sl, 2));
+    addItem(new VhdlFnScope("nand", sl, sl_sl, 2));
+    addItem(new VhdlFnScope("nor", sl, sl_sl, 2));
+    addItem(new VhdlFnScope("xnor", sl, sl_sl, 2));
   }
 
   void addItem(VhdlScope *element) {
     if(element) {
       string itemClass = element->getItemClass();
-      string caseInsensitiveId = itemClass + boost::to_lower_copy(escapeName(element->to_string()));
+      string caseInsensitiveId = boost::to_lower_copy(element->mangled_name());
       //cout << "Declaring " << caseInsensitiveId << endl;
       scopes[caseInsensitiveId] = element;
     }
   }
 
   VhdlScope* searchItem(string name) {
-    string caseInsensitiveId = escapeName(boost::to_lower_copy(name));
+    string caseInsensitiveId = boost::to_lower_copy(name);
     if ( scopes.find(caseInsensitiveId) == scopes.end() ) {
       return NULL;
     } else {

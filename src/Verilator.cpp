@@ -139,6 +139,7 @@ void V3Global::readFiles() {
   string filename = *it;
   vhdParser.parseFile(*it);
     }
+    vhdlScopeTable.dump();
 
     // Read libraries
     // To be compatible with other simulators,

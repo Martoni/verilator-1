@@ -61,7 +61,6 @@ public:
         varp = new AstVar(flVar, AstVarType::INOUT, portName, dtypep);
       varp->childDTypep(dtypep);
 
-
       m_currentModule->addStmtp(varp);
     }
     return visitChildren(ctx);
