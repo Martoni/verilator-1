@@ -10,14 +10,20 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 scenarios(simulator => 1);
 
 compile(
-    verilator_flags2 => ["--trace"]
+    verilator_flags2 => ["-unroll-count 1024",
+                         "--stats"],
     );
 
 execute(
     check_finished => 1,
     );
 
-vcd_identical("$Self->{obj_dir}/simx.vcd", "t/$Self->{name}.out");
+if ($Self->{vlt_all}) {
+    file_grep ($Self->{stats}, qr/Optimizations, Reloop iterations\s+(\d+)/i,
+               768);
+    file_grep ($Self->{stats}, qr/Optimizations, Reloops\s+(\d+)/i,
+               3);
+}
 
 ok(1);
 1;

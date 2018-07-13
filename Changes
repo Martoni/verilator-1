@@ -12,14 +12,24 @@ The contributors that suggested a given feature are shown in []. Thanks!
 
 ***   Better optimize large always block splitting, bug1244. [John Coiner]
 
+***   Add new reloop optimization for repetitive assignment compression.
+
 ****  Fix internals to avoid 'using namespace std'.
 
 ****  Fix Verilation performance issues, bug1316. [John Coiner]
+
+****  Fix clocker attributes to not propagate on concats. [John Coiner]
 
 
 * Verilator 3.925 devel
 
 ****  Add OBJCACHE envvar support to examples and generated Makefiles.
+
+****  Fix define argument stringification (`"), broke since 3.914. [Joe DErrico]
+
+****  Fix to ignore Unicode UTF-8 BOM sequences, msg2576. [HyungKi Jeong]
+
+****  Fix std:: build error, bug1322.
 
 
 * Verilator 3.924 2018-06-12

@@ -15,6 +15,14 @@ AC_CONFIG_FILES(Makefile src/Makefile src/Makefile_obj include/verilated.mk incl
 
 AC_MSG_RESULT([configuring for $PACKAGE_STRING])
 
+# Ignore automake flags passed by Ubuntu builds
+AC_ARG_ENABLE([dependency-tracking],
+              [AS_HELP_STRING([--disable-dependency-tracking], [ignored])])
+AC_ARG_ENABLE([maintainer-mode],
+              [AS_HELP_STRING([--enable-maintainer-mode], [ignored])])
+AC_ARG_ENABLE([silent-rules],
+              [AS_HELP_STRING([--disable-silent-rules], [ignored])])
+
 # Special Substitutions - CFG_WITH_DEFENV
 AC_MSG_CHECKING(whether to use hardcoded paths)
 AC_ARG_ENABLE([defenv],
@@ -64,6 +72,21 @@ AC_ARG_ENABLE([longtests],
               )
 AC_SUBST(CFG_WITH_LONGTESTS)
 AC_MSG_RESULT($CFG_WITH_LONGTESTS)
+
+# CFG_WITH_PREC11
+AC_MSG_CHECKING(whether allow pre-C++11)
+AC_ARG_ENABLE([prec11],
+              [AS_HELP_STRING([--enable-prec11],
+                              [enable pre-C++11 compilers])],
+              [case "${enableval}" in
+                yes) CFG_WITH_PREC11=yes ;;
+                no)  CFG_WITH_PREC11=no ;;
+                *)   AC_MSG_ERROR([bad value ${enableval} for --enable-prec11]) ;;
+               esac],
+              [CFG_WITH_PREC11=no;]
+              )
+AC_SUBST(CFG_WITH_PREC11)
+AC_MSG_RESULT($CFG_WITH_PREC11)
 
 # Compiler flags
 CFLAGS=-I${includedir}
@@ -283,6 +306,22 @@ AC_LINK_IFELSE(
 CFG_WITH_THREADED=$_my_result
 AC_SUBST(CFG_WITH_THREADED)
 AC_MSG_RESULT($CFG_WITH_THREADED)
+
+# Check compiler flag
+if test "$CFG_WITH_THREADED" = "no" ; then
+   if test "$CFG_WITH_PREC11" = "no" ; then
+      AC_MSG_NOTICE([[]])
+      AC_MSG_ERROR([[the $CXX compiler appears to not support C++11.
+
+Verilator plans to require a C++11 or newer compiler in a future release,
+unless sufficient people report problems. Therefore, if you do not have a
+C++11 compiler, please post a message to
+https://www.veripool.org/boards/3/topics/2580-Verilator-Requiring-C-11-compiler
+indicating your OS and when you think C++11 might be ok, and then rerun
+configure with the --enable-prec11 argument. Thanks.]])
+
+   fi
+fi
 
 # Checks for library functions.
 AC_CHECK_MEMBER([struct stat.st_mtim.tv_nsec],
