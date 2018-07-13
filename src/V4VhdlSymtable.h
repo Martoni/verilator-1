@@ -86,6 +86,18 @@ public:
     VhdlScope *sl = new VhdlTypeScope("std_logic", slu, false);
     addItem(sl);
 
+    VhdlScope *slv = new VhdlTypeScope("std_logic_vector", sl, true);
+    addItem(slv);
+
+    VhdlScope *sluv = new VhdlTypeScope("std_ulogic_vector", sl, true);
+    addItem(sluv);
+
+    VhdlScope *sig = new VhdlTypeScope("signed", sl, true);
+    addItem(sig);
+
+    VhdlScope *unsig = new VhdlTypeScope("unsigned", sl, true);
+    addItem(unsig);
+
     /*addItem(new VhdlScope("_fn_and_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_or_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_xor_std__logic_std__logic_std__logic"));
