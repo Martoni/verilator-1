@@ -22,8 +22,12 @@ public:
     m_name = name;
   }
 
-  string getName() {
+  virtual string to_string() {
     return m_name;
+  }
+
+  virtual string getItemClass() {
+    return "";
   }
 };
 
@@ -37,8 +41,32 @@ public:
     return m_type;
   }
 
+  virtual string getItemClass() {
+    return "";
+  }
+
 private:
     VhdlScope *m_type;
+};
+
+class VhdlTypeScope : public VhdlScope {
+public:
+  VhdlTypeScope(string name, VhdlScope *parent_type, bool isArray) : VhdlScope(name) {
+    m_parent_type = parent_type;
+    m_isArray = isArray;
+  }
+
+  VhdlScope *getParentType() {
+    return m_parent_type;
+  }
+
+  virtual string getItemClass() {
+    return "_type_";
+  }
+
+private:
+    VhdlScope *m_parent_type;
+    bool m_isArray;
 };
 
 class VhdlScopeTable {
@@ -52,7 +80,8 @@ private:
 
 public:
   VhdlScopeTable() {
-    addItem(new VhdlScope("std_logic"), "_type_");
+    addItem(new VhdlTypeScope("std_logic", NULL, false));
+    addItem(new VhdlTypeScope("std_ulogic", NULL, false));
     /*addItem(new VhdlScope("_fn_and_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_or_std__logic_std__logic_std__logic"));
     addItem(new VhdlScope("_fn_xor_std__logic_std__logic_std__logic"));
@@ -62,12 +91,9 @@ public:
   }
 
   void addItem(VhdlScope *element) {
-    addItem(element, "");
-  }
-
-  void addItem(VhdlScope *element, string itemClass) {
     if(element) {
-      string caseInsensitiveId = itemClass + boost::to_lower_copy(escapeName(element->getName()));
+      string itemClass = element->getItemClass();
+      string caseInsensitiveId = itemClass + boost::to_lower_copy(escapeName(element->to_string()));
       //cout << "Declaring " << caseInsensitiveId << endl;
       scopes[caseInsensitiveId] = element;
     }
