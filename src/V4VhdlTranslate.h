@@ -33,6 +33,7 @@ public:
       string portName = port->value->getText();
 
       string typeName = visitSelected_name(ctx->subtype_indication()->selected_name()[0]);
+
       VhdlTypeScope *type = m_scopeTable->searchType(typeName);
       if (!type) {
         cout << "Error: " << typeName << " does not name a type" << endl;
@@ -45,8 +46,12 @@ public:
       m_currentModule->addStmtp(portp);
 
       FileLine *flType = new FileLine(m_filename, port->value->getLine());
-      AstNodeDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
-
+      AstBasicDType *dtypep = new AstBasicDType(flType, AstBasicDTypeKwd::BIT);
+      if (ctx->subtype_indication()->constraint()) {
+        if (ctx->subtype_indication()->constraint()->index_constraint()) {
+          dtypep->rangep(visitIndex_constraint(ctx->subtype_indication()->constraint()->index_constraint()));
+        }
+      }
       FileLine *flVar = new FileLine(m_filename, port->value->getLine());
       AstVar *varp;
       if (ctx->signal_mode()->IN())
@@ -140,6 +145,12 @@ public:
 
   virtual antlrcpp::Any visitWaveform(vhdlParser::WaveformContext *ctx) override {
     return visitExpression(ctx->waveform_element()[0]->expression()[0]);
+  }
+
+  virtual antlrcpp::Any visitIndex_constraint(vhdlParser::Index_constraintContext *ctx) override {
+      FileLine *fl = new FileLine(m_filename, 0);
+      auto range = ctx->discrete_range()[0]->range_decl()->explicit_range();
+      return new AstRange(fl, (AstNode*)visitSimple_expression(range->simple_expression()[0]), (AstNode*)visitSimple_expression(range->simple_expression()[1]));
   }
 
   void resolveType(AstNode* node) {
@@ -301,9 +312,9 @@ public:
     } else if (ctx->abstract_literal()) {
       if (ctx->abstract_literal()->INTEGER()) {
         FileLine *fl = new FileLine(m_filename, 0);
-        uint32_t constValue = stoi(ctx->abstract_literal()->INTEGER()->getText());
+        uint32_t constValue = stoul(ctx->abstract_literal()->INTEGER()->getText());
         FileLine *flNumber = new FileLine(m_filename, 0);
-        const V3Number value(flNumber, 1, constValue);
+        const V3Number value(flNumber, 32, constValue);
         return (AstNode*) new AstConst(fl, value);
       }
     }
