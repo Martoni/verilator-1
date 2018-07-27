@@ -33,7 +33,7 @@ public:
       string portName = port->value->getText();
 
       string typeName = visitSelected_name(ctx->subtype_indication()->selected_name()[0]);
-      VhdlScope *type = m_scopeTable->searchType(typeName);
+      VhdlTypeScope *type = m_scopeTable->searchType(typeName);
       if (!type) {
         cout << "Error: " << typeName << " does not name a type" << endl;
         exit(-1);
@@ -71,7 +71,7 @@ public:
       string sigName = sig->value->getText();
 
       string typeName = visitSelected_name(ctx->subtype_indication()->selected_name()[0]);
-      VhdlScope *type = m_scopeTable->searchType(typeName);
+      VhdlTypeScope *type = m_scopeTable->searchType(typeName);
       if (!type) {
         cout << "Error: " << typeName << " does not name a type" << endl;
         exit(-1);
@@ -142,11 +142,19 @@ public:
     return visitExpression(ctx->waveform_element()[0]->expression()[0]);
   }
 
+  void resolveType(AstNode* node) {
+    string opName = node->name();
+    string typeName = ((VhdlVarScope*)m_scopeTable->searchItem(opName))->getType()->to_string();
+    cout << opName << " of type " << typeName << endl;
+  }
+
   virtual antlrcpp::Any visitExpression(vhdlParser::ExpressionContext *ctx) override {
     if (not ctx->logical_operator().size())
       return visitRelation(ctx->relation()[0]);
     else if (ctx->logical_operator()[0]->AND()) {
       FileLine *fl = new FileLine(m_filename, 0);
+      resolveType((AstNode*)visitRelation(ctx->relation()[0]));
+      resolveType((AstNode*)visitRelation(ctx->relation()[1]));
       return (AstNode*) new AstAnd(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
     } else if (ctx->logical_operator()[0]->OR()) {
       FileLine *fl = new FileLine(m_filename, 0);
@@ -171,7 +179,27 @@ public:
   }
 
   virtual antlrcpp::Any visitRelation(vhdlParser::RelationContext *ctx) override {
+    if (!ctx->relational_operator())
       return visitShift_expression(ctx->shift_expression()[0]);
+    else if (ctx->relational_operator()->EQ()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstEq(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    } else if (ctx->relational_operator()->NEQ()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstNeq(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    } else if (ctx->relational_operator()->LOWERTHAN()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstLt(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    } else if (ctx->relational_operator()->LE()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstLte(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    } else if (ctx->relational_operator()->GREATERTHAN()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstGt(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    } else if (ctx->relational_operator()->GE()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstGte(fl, visitShift_expression(ctx->shift_expression()[0]), visitShift_expression(ctx->shift_expression()[1]));
+    }
   }
 
   virtual antlrcpp::Any visitShift_expression(vhdlParser::Shift_expressionContext *ctx) override {
@@ -179,15 +207,51 @@ public:
   }
 
   virtual antlrcpp::Any visitSimple_expression(vhdlParser::Simple_expressionContext *ctx) override {
-    return visitTerm(ctx->term()[0]);
+    if (not ctx->adding_operator().size())
+      return visitTerm(ctx->term()[0]);
+    else if (ctx->adding_operator()[0]->PLUS()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstAdd(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
+    } else if (ctx->adding_operator()[0]->MINUS()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstSub(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
+    } else if (ctx->adding_operator()[0]->AMPERSAND()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstConcat(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
+    }
   }
 
   virtual antlrcpp::Any visitTerm(vhdlParser::TermContext *ctx) override {
-    return visitFactor(ctx->factor()[0]);
+    if (not ctx->multiplying_operator().size())
+      return visitFactor(ctx->factor()[0]);
+    else if (ctx->multiplying_operator()[0]->MUL()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstMul(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
+    } else if (ctx->multiplying_operator()[0]->DIV()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstDiv(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
+    } else if (ctx->multiplying_operator()[0]->MOD()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstModDiv(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
+    } else if (ctx->multiplying_operator()[0]->REM()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstModDivS(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
+    }
   }
 
   virtual antlrcpp::Any visitFactor(vhdlParser::FactorContext *ctx) override {
-    return visitPrimary(ctx->primary()[0]);
+    if (ctx->DOUBLESTAR()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      // TODO implement
+    } else if (ctx->ABS()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      // TODO implemeAnt
+    } else if (ctx->NOT()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      return (AstNode*) new AstNot(fl, visitPrimary(ctx->primary()[0]));
+    }
+    else
+      return visitPrimary(ctx->primary()[0]);
   }
 
   virtual antlrcpp::Any visitSelected_name(vhdlParser::Selected_nameContext *ctx) override {

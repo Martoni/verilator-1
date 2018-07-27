@@ -39,35 +39,9 @@ public:
   virtual AstNode *translate() = 0;
 };
 
-class VhdlVarScope : public VhdlScope {
-public:
-  VhdlVarScope(string name, VhdlScope *type) : VhdlScope(name) {
-    m_type = type;
-  }
-
-  virtual string mangled_name() {
-    return escapeName(m_name);
-  }
-
-  VhdlScope *getType() {
-    return m_type;
-  }
-
-  virtual string getItemClass() {
-    return "";
-  }
-
-  virtual AstNode *translate() {
-    return NULL;
-  }
-
-private:
-    VhdlScope *m_type;
-};
-
 class VhdlTypeScope : public VhdlScope {
 public:
-  VhdlTypeScope(string name, VhdlScope *parent_type, bool isArray) : VhdlScope(name) {
+  VhdlTypeScope(string name, VhdlTypeScope *parent_type, bool isArray) : VhdlScope(name) {
     m_parent_type = parent_type;
     m_isArray = isArray;
   }
@@ -89,8 +63,34 @@ public:
   }
 
 private:
-    VhdlScope *m_parent_type;
+    VhdlTypeScope *m_parent_type;
     bool m_isArray;
+};
+
+class VhdlVarScope : public VhdlScope {
+public:
+  VhdlVarScope(string name, VhdlTypeScope *type) : VhdlScope(name) {
+    m_type = type;
+  }
+
+  virtual string mangled_name() {
+    return escapeName(m_name);
+  }
+
+  virtual VhdlTypeScope * getType() {
+    return m_type;
+  }
+
+  virtual string getItemClass() {
+    return "";
+  }
+
+  virtual AstNode * translate() {
+    return NULL;
+  }
+
+private:
+    VhdlTypeScope *m_type;
 };
 
 class VhdlFnScope : public VhdlScope {
@@ -171,7 +171,11 @@ public:
       string itemClass = element->getItemClass();
       string caseInsensitiveId = boost::to_lower_copy(element->mangled_name());
       //cout << "Declaring " << caseInsensitiveId << endl;
-      scopes[caseInsensitiveId] = element;
+      if ( scopes.find(caseInsensitiveId) == scopes.end() ) {
+        scopes[caseInsensitiveId] = element;
+      } else {
+        cout << "Element " << caseInsensitiveId << " already defined" << endl;
+      }
     }
   }
 
@@ -184,15 +188,30 @@ public:
     }
   }
 
-  VhdlScope* searchType(string name) {
+  VhdlTypeScope* searchType(string name) {
     string typeName = boost::to_lower_copy("_type_" + escapeName(name));
     //cout << "Lookup for " << typeName << endl;
     if ( scopes.find(typeName) == scopes.end() ) {
       return NULL;
     } else {
-      return scopes[typeName];
+      return (VhdlTypeScope*)scopes[typeName];
     }
   }
+
+  VhdlScope* searchFn(string name, VhdlTypeScope *return_type, VhdlTypeScope **params_type, unsigned int params_count) {
+    string fnName = "_fn_" + escapeName(name);
+    fnName += "_" + escapeName(return_type->to_string());
+    for (int i=0; i < params_count; i++) {
+      fnName += "_" + escapeName(params_type[i]->to_string());
+    }
+    //cout << "Lookup for " << typeName << endl;
+    if ( scopes.find(fnName) == scopes.end() ) {
+      return NULL;
+    } else {
+      return scopes[fnName];
+    }
+  }
+
 
   void dump() {
     cout << "VHDL symbols dump" << endl << "------------------------"<< endl;
