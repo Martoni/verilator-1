@@ -269,13 +269,21 @@ public:
   }
 
   virtual antlrcpp::Any visitPrimary(vhdlParser::PrimaryContext *ctx) override {
-    if (ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()) {
+
+    // Handle numeric literals
+    if (ctx->literal()->numeric_literal()) {
+      return (AstNode*) visitNumeric_literal(ctx->literal()->numeric_literal());
+
+    // Handle char literal
+    } else if (ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()) {
       FileLine *fl = new FileLine(m_filename, 0);
       uint32_t constValue = interpretEnumerationLiteral(ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()->getText());
       FileLine *flNumber = new FileLine(m_filename, 0);
       const V3Number value(flNumber, 1, constValue);
       return (AstNode*) new AstConst(fl, value);
-    } else {
+
+      // Special case for VarRef coming from here instead of name
+    } else if (ctx->literal()->enumeration_literal()->identifier()){
       FileLine *fl = new FileLine(m_filename, 0);
       string targetName = ctx->literal()->enumeration_literal()->identifier()->value->getText();
       if (!m_scopeTable->searchItem(targetName)) {
@@ -283,6 +291,21 @@ public:
         exit(-1);
       }
       return (AstNode*) new AstVarRef(fl, targetName, false);
+    }
+  }
+
+  virtual antlrcpp::Any visitNumeric_literal(vhdlParser::Numeric_literalContext *ctx) override {
+    if (ctx->physical_literal()) {
+      cout << "Error: VHDL physical literal not supported" << endl;
+      exit(-1);
+    } else if (ctx->abstract_literal()) {
+      if (ctx->abstract_literal()->INTEGER()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        uint32_t constValue = stoi(ctx->abstract_literal()->INTEGER()->getText());
+        FileLine *flNumber = new FileLine(m_filename, 0);
+        const V3Number value(flNumber, 1, constValue);
+        return (AstNode*) new AstConst(fl, value);
+      }
     }
   }
 
