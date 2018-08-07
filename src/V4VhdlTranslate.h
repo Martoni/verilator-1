@@ -118,22 +118,25 @@ public:
   }
 
   virtual antlrcpp::Any visitConditional_signal_assignment(vhdlParser::Conditional_signal_assignmentContext *ctx) override {
-    if (!ctx->conditional_waveforms()->WHEN()) {
-      cout << "Concurrent assign" << endl;
-      FileLine *flRef = new FileLine(m_filename, 0); // TODO fix This
-      AstVarRef *source = new AstVarRef(flRef, "A1", false);
+    FileLine *fl = new FileLine(m_filename, 0); // TODO fix This
+    AstAssignW *assign = new AstAssignW(fl, visitTarget(ctx->target()), visitConditional_waveforms(ctx->conditional_waveforms()));
+    m_currentModule->addStmtp(assign);
+    return NULL;
+  }
 
-      FileLine *fl = new FileLine(m_filename, 0); // TODO fix This
-      AstAssignW *assign = new AstAssignW(fl, visitTarget(ctx->target()), visitConditional_waveforms(ctx->conditional_waveforms()));
-      m_currentModule->addStmtp(assign);
+  virtual antlrcpp::Any visitConditional_waveforms(vhdlParser::Conditional_waveformsContext *ctx) override {
+    AstNode *node = visitWaveform(ctx->waveform());
+    if (ctx->WHEN()) {
+      FileLine *fl = new FileLine(m_filename, 0);
+      if (ctx->ELSE()) { // TODO fix mistranslation when ELSE is missing (condition dropped)
+        node = new AstCond(fl, visitCondition(ctx->condition()), node, (AstNode*)visitConditional_waveforms(ctx->conditional_waveforms()));
+      }
     }
-
-    return visitChildren(ctx);
+    return (AstNode*) node;
   }
 
   virtual antlrcpp::Any visitTarget(vhdlParser::TargetContext *ctx) override {
     if (ctx->name()) {
-      cout << "Target " << ctx->name()->identifier()->value->getLine() << endl;
       FileLine *fl = new FileLine(m_filename, ctx->name()->identifier()->value->getLine());
       string targetName =  ctx->name()->identifier()->value->getText();
       if (!m_scopeTable->searchItem(targetName)) {
