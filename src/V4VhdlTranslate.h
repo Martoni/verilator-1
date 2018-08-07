@@ -160,33 +160,36 @@ public:
   }
 
   virtual antlrcpp::Any visitExpression(vhdlParser::ExpressionContext *ctx) override {
-    if (not ctx->logical_operator().size())
-      return visitRelation(ctx->relation()[0]);
-    else if (ctx->logical_operator()[0]->AND()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      resolveType((AstNode*)visitRelation(ctx->relation()[0]));
-      resolveType((AstNode*)visitRelation(ctx->relation()[1]));
-      return (AstNode*) new AstAnd(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
-    } else if (ctx->logical_operator()[0]->OR()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstOr(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
-    } else if (ctx->logical_operator()[0]->NAND()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      AstNode* and_op = new AstAnd(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
-      FileLine *fl_not = new FileLine(m_filename, 0);
-      return (AstNode*) new AstNot(fl_not, and_op);
-    } else if (ctx->logical_operator()[0]->NOR()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      AstNode* or_op = new AstOr(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
-      FileLine *fl_not = new FileLine(m_filename, 0);
-      return (AstNode*) new AstNot(fl_not, or_op);
-    } else if (ctx->logical_operator()[0]->XOR()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstXor(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
-    } else if (ctx->logical_operator()[0]->XNOR()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstXnor(fl, visitRelation(ctx->relation()[0]), visitRelation(ctx->relation()[1]));
+    AstNode * previousNode = visitRelation(ctx->relation()[0]);
+    for (int i = 0; i < ctx->logical_operator().size(); ++i) {
+      cout << i << " " << ctx->logical_operator()[i] << endl;
+      if (ctx->logical_operator()[i]->AND()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        resolveType((AstNode*)visitRelation(ctx->relation()[i]));
+        resolveType((AstNode*)visitRelation(ctx->relation()[i+1]));
+        previousNode = new AstAnd(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+      } else if (ctx->logical_operator()[i]->OR()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        previousNode = new AstOr(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+      } else if (ctx->logical_operator()[i]->NAND()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        AstNode* and_op = new AstAnd(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+        FileLine *fl_not = new FileLine(m_filename, 0);
+        previousNode = new AstNot(fl_not, and_op);
+      } else if (ctx->logical_operator()[i]->NOR()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        AstNode* or_op = new AstOr(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+        FileLine *fl_not = new FileLine(m_filename, 0);
+        previousNode = new AstNot(fl_not, or_op);
+      } else if (ctx->logical_operator()[i]->XOR()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        previousNode = new AstXor(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+      } else if (ctx->logical_operator()[i]->XNOR()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        previousNode = new AstXnor(fl, previousNode, visitRelation(ctx->relation()[i+1]));
+      }
     }
+    return (AstNode*) previousNode;
   }
 
   virtual antlrcpp::Any visitRelation(vhdlParser::RelationContext *ctx) override {
