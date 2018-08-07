@@ -222,36 +222,40 @@ public:
   }
 
   virtual antlrcpp::Any visitSimple_expression(vhdlParser::Simple_expressionContext *ctx) override {
-    if (not ctx->adding_operator().size())
-      return visitTerm(ctx->term()[0]);
-    else if (ctx->adding_operator()[0]->PLUS()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstAdd(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
-    } else if (ctx->adding_operator()[0]->MINUS()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstSub(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
-    } else if (ctx->adding_operator()[0]->AMPERSAND()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstConcat(fl, visitTerm(ctx->term()[0]), visitTerm(ctx->term()[1]));
+    AstNode * prevNode = visitTerm(ctx->term()[0]);
+    for (int i = 0; i < ctx->adding_operator().size(); ++i) {
+      if (ctx->adding_operator()[i]->PLUS()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstAdd(fl, prevNode, visitTerm(ctx->term()[i + 1]));
+      } else if (ctx->adding_operator()[i]->MINUS()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstSub(fl, prevNode, visitTerm(ctx->term()[i + 1]));
+      } else if (ctx->adding_operator()[i]->AMPERSAND()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstConcat(fl, prevNode, visitTerm(ctx->term()[i + 1]));
+      }
     }
+    return (AstNode*) prevNode;
   }
 
   virtual antlrcpp::Any visitTerm(vhdlParser::TermContext *ctx) override {
-    if (not ctx->multiplying_operator().size())
-      return visitFactor(ctx->factor()[0]);
-    else if (ctx->multiplying_operator()[0]->MUL()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstMul(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
-    } else if (ctx->multiplying_operator()[0]->DIV()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstDiv(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
-    } else if (ctx->multiplying_operator()[0]->MOD()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstModDiv(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
-    } else if (ctx->multiplying_operator()[0]->REM()) {
-      FileLine *fl = new FileLine(m_filename, 0);
-      return (AstNode*) new AstModDivS(fl, visitFactor(ctx->factor()[0]), visitFactor(ctx->factor()[1]));
+    AstNode * prevNode = visitFactor(ctx->factor()[0]);
+    for (int i = 0; i < ctx->multiplying_operator().size(); ++i) {
+      if (ctx->multiplying_operator()[i]->MUL()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstMul(fl, prevNode, visitFactor(ctx->factor()[i + 1]));
+      } else if (ctx->multiplying_operator()[i]->DIV()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstDiv(fl, prevNode, visitFactor(ctx->factor()[i + 1]));
+      } else if (ctx->multiplying_operator()[i]->MOD()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstModDiv(fl, prevNode, visitFactor(ctx->factor()[i + 1]));
+      } else if (ctx->multiplying_operator()[i]->REM()) {
+        FileLine *fl = new FileLine(m_filename, 0);
+        prevNode = new AstModDivS(fl, prevNode, visitFactor(ctx->factor()[i + 1]));
+      }
     }
+    return (AstNode*) prevNode;
   }
 
   virtual antlrcpp::Any visitFactor(vhdlParser::FactorContext *ctx) override {
