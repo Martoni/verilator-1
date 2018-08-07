@@ -5,6 +5,7 @@
 #include "vhdl_parser/vhdlBaseVisitor.h"
 #include "V3Ast.h"
 #include <iostream>
+#include <algorithm>
 using namespace std;
 
 class VhdlTranslateVisitor: public vhdlBaseVisitor{
@@ -319,6 +320,17 @@ public:
         FileLine *flNumber = new FileLine(m_filename, 0);
         const V3Number value(flNumber, 32, constValue);
         return (AstNode*) new AstConst(fl, value);
+        // TODO fix this with correct values
+      } else if (ctx->abstract_literal()->BASE_LITERAL()) {
+        auto basestr = ctx->abstract_literal()->BASE_LITERAL()->getText();
+        basestr.erase(remove(basestr.begin(), basestr.end(), '_'), basestr.end());
+        FileLine *fl = new FileLine(m_filename, 0);
+        uint32_t constValue = 0;
+        FileLine *flNumber = new FileLine(m_filename, 0);
+        const V3Number value(flNumber, 32, constValue);
+        return (AstNode*) new AstConst(fl, value);
+        cout << basestr << endl;
+
       }
     }
   }
