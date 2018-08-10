@@ -301,7 +301,7 @@ public:
       FileLine *fl = new FileLine(m_filename, 0);
       uint32_t constValue = interpretEnumerationLiteral(ctx->literal()->enumeration_literal()->CHARACTER_LITERAL()->getText());
       FileLine *flNumber = new FileLine(m_filename, 0);
-      const V3Number value(flNumber, 1, constValue);
+      const V3Number value(flNumber, 0, constValue);
       return (AstNode*) new AstConst(fl, value);
 
       // Special case for VarRef coming from here instead of name
@@ -325,7 +325,7 @@ public:
         FileLine *fl = new FileLine(m_filename, 0);
         uint32_t constValue = stoul(ctx->abstract_literal()->INTEGER()->getText());
         FileLine *flNumber = new FileLine(m_filename, 0);
-        const V3Number value(flNumber, 32, constValue);
+        const V3Number value(flNumber, 0, constValue);
         return (AstNode*) new AstConst(fl, value);
         // TODO fix this with correct values
       } else if (ctx->abstract_literal()->BASE_LITERAL()) {
@@ -334,7 +334,7 @@ public:
         FileLine *fl = new FileLine(m_filename, 0);
         uint32_t constValue = 0;
         FileLine *flNumber = new FileLine(m_filename, 0);
-        const V3Number value(flNumber, 32, constValue);
+        const V3Number value(flNumber, 0, constValue);
         return (AstNode*) new AstConst(fl, value);
         cout << basestr << endl;
 
