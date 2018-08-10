@@ -342,6 +342,63 @@ public:
     }
   }
 
+  virtual antlrcpp::Any visitProcess_statement(vhdlParser::Process_statementContext *ctx) override {
+    FileLine *flSenTree = new FileLine(m_filename, 0);
+    AstSenTree *senList = new AstSenTree(flSenTree, NULL);
+    if (ctx->sensitivity_list()) { // Create refs for sensitivity list
+      for (auto sigName : ctx->sensitivity_list()->name()) {
+        FileLine *flSigRef = new FileLine(m_filename, 0);
+        AstNode *sigRef = new AstVarRef(flSigRef, sigName->identifier()->getText(), false);
+        FileLine *flSenItem = new FileLine(m_filename, 0);
+        senList->addSensesp(new AstSenItem(flSenItem, AstEdgeType::ET_ANYEDGE, sigRef));
+      }
+    }
+
+    AstBegin *content = NULL;
+    if (ctx->process_statement_part()) {
+      FileLine *flProcessStmts = new FileLine(m_filename, 0);
+      content = new AstBegin(flProcessStmts, "", NULL);
+      for (auto stmt : ctx->process_statement_part()->sequential_statement()) {
+        content->addStmtsp(visitSequential_statement(stmt));
+      }
+    }
+
+    FileLine *flProcess = new FileLine(m_filename, 0);
+    AstAlways *process = new AstAlways(flProcess, VAlwaysKwd::ALWAYS, senList, content);
+    m_currentModule->addStmtp(process);
+    return NULL;
+  }
+
+  virtual antlrcpp::Any visitSignal_assignment_statement(vhdlParser::Signal_assignment_statementContext *ctx) override {
+    FileLine *flAssign = new FileLine(m_filename, 0);
+    AstAssignDly *assign = new AstAssignDly(flAssign, visitTarget(ctx->target()), visitWaveform(ctx->waveform()));
+    return (AstNode *) assign;
+  }
+
+  virtual antlrcpp::Any visitIf_statement(vhdlParser::If_statementContext *ctx) override {
+    // Visit the chain in reverse order to recreate it
+    AstNode *elsep = NULL;
+
+    // Latest block of code is the else
+    if (ctx->ELSE())
+      elsep = visitSequence_of_statements(ctx->sequence_of_statements()[ctx->sequence_of_statements().size() - 1]);
+
+    // By default take the first then statement
+    AstNode *thenp = visitSequence_of_statements(ctx->sequence_of_statements()[0]);
+
+    for(int ifc = ctx->ELSIF().size(); ifc >= 1 ; --ifc) {
+      cout << ifc << endl;
+      thenp = visitSequence_of_statements(ctx->sequence_of_statements()[ifc]);
+      FileLine *flElsif = new FileLine(m_filename, 0);
+      elsep = new AstIf(flElsif, visitCondition(ctx->condition()[ifc]), thenp, elsep);
+      thenp = visitSequence_of_statements(ctx->sequence_of_statements()[ifc - 1]);
+    }
+
+    FileLine *flIf = new FileLine(m_filename, 0);
+    AstIf *last_if = new AstIf(flIf, visitCondition(ctx->condition()[0]), thenp, elsep);
+    return (AstNode *)last_if;
+  }
+
 private:
   string m_filename;
   AstNetlist *m_rootp;
