@@ -375,6 +375,12 @@ public:
     return (AstNode *) assign;
   }
 
+  virtual antlrcpp::Any visitVariable_assignment_statement(vhdlParser::Variable_assignment_statementContext *ctx) override {
+    FileLine *flAssign = new FileLine(m_filename, 0);
+    AstAssign *assign = new AstAssign(flAssign, visitTarget(ctx->target()), visitExpression(ctx->expression()));
+    return (AstNode *) assign;
+  }
+
   virtual antlrcpp::Any visitIf_statement(vhdlParser::If_statementContext *ctx) override {
     // Visit the chain in reverse order to recreate it
     AstNode *elsep = NULL;
