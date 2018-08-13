@@ -196,6 +196,7 @@ RAW_OBJS = \
 	V3GraphAlg.o \
 	V3GraphAcyc.o \
 	V3GraphDfa.o \
+	V3GraphPathChecker.o \
 	V3GraphTest.o \
 	V3Hashed.o \
 	V3Inline.o \
@@ -217,10 +218,12 @@ RAW_OBJS = \
 	V3Order.o \
 	V3Os.o \
 	V3Param.o \
+	V3Partition.o \
 	V3PreShell.o \
 	V3Premit.o \
 	V3Reloop.o \
 	V3Scope.o \
+	V3Scoreboard.o \
 	V3Slice.o \
 	V3Split.o \
 	V3SplitAs.o \

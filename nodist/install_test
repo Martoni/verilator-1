@@ -64,6 +64,7 @@ sub test {
 	run("test -e $prefix/bin/verilator");
 	run("test -e $prefix/bin/verilator_bin");
 	run("test -e $prefix/bin/verilator_bin_dbg");
+        run("test -e $prefix/bin/verilator_gantt");
 	run("test -e $prefix/bin/verilator_profcfunc");
     }
 
@@ -100,14 +101,14 @@ sub write_verilog {
     my $fh = IO::File->new(">$dir/foo.cpp");
     $fh->print('#include "Vfoo.h"'		,"\n");
     $fh->print('unsigned int main_time = 0;'	,"\n");
-    $fh->print('double sc_time_stamp () {'	,"\n");
+    $fh->print('double sc_time_stamp() {'       ,"\n");
     $fh->print('    return main_time;'		,"\n");
     $fh->print('}'				,"\n");
     $fh->print('int main() {'			,"\n");
     $fh->print('    Vfoo *top = new Vfoo;'	,"\n");
     $fh->print('    while (!Verilated::gotFinish()) {',"\n");
-    $fh->print('	top->eval();'		,"\n");
-    $fh->print('	main_time++;'		,"\n");
+    $fh->print('        top->eval();'           ,"\n");
+    $fh->print('        main_time++;'           ,"\n");
     $fh->print('    }'				,"\n");
     $fh->print('    top->final();'		,"\n");
     $fh->print('}'				,"\n");

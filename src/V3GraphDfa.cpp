@@ -40,11 +40,11 @@ DfaVertex* DfaGraph::findStart() {
     for (V3GraphVertex* vertexp = this->verticesBeginp(); vertexp; vertexp=vertexp->verticesNextp()) {
 	if (DfaVertex* vvertexp = dynamic_cast<DfaVertex*>(vertexp)) {
 	    if (vvertexp->start()) {
-		if (startp) v3fatalSrc("Multiple start points in NFA graph");
+                if (startp) vertexp->v3fatalSrc("Multiple start points in NFA graph");
 		startp = vvertexp;
 	    }
 	} else {
-	    v3fatalSrc("Non DfaVertex in DfaGraph");
+            vertexp->v3fatalSrc("Non DfaVertex in DfaGraph");
 	}
     }
     if (!startp) v3fatalSrc("No start point in NFA graph");
@@ -116,7 +116,9 @@ private:
 		DfaVertex* nfaStatep = static_cast<DfaVertex*>(dfaEdgep->top());
 		hash ^= hashVertex(nfaStatep);
 		if (debug()) {
-		    if (nfaStatep->user()==m_step) v3fatalSrc("DFA state points to duplicate NFA state.");
+                    if (nfaStatep->user()==m_step) {
+                        nfaStatep->v3fatalSrc("DFA state points to duplicate NFA state.");
+                    }
 		    nfaStatep->user(m_step);
 		}
 	    }
@@ -346,7 +348,7 @@ private:
 
 public:
     GraphNfaToDfa(V3Graph* graphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	m_step = 0;
 	main();
     }
@@ -444,7 +446,7 @@ private:
 		vertexp->user(1);
 	    } else {
 		// If ever remove this, need dyn cast below
-		v3fatalSrc("Non DfaVertex in dfa graph");
+                vertexp->v3fatalSrc("Non DfaVertex in dfa graph");
 	    }
 	}
 
@@ -469,7 +471,7 @@ private:
     }
 public:
     DfaGraphReduce(V3Graph* graphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	if (debug()>=6) m_graphp->dumpDotFilePrefixed("opt_in");
 	optimize_accepting_out();
 	if (debug()>=6) m_graphp->dumpDotFilePrefixed("opt_acc");
@@ -559,7 +561,7 @@ private:
     }
 public:
     DfaGraphComplement(V3Graph* dfagraphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(dfagraphp, edgeFuncp) {
+	: GraphAlg<>(dfagraphp, edgeFuncp) {
 	if (debug()>=6) m_graphp->dumpDotFilePrefixed("comp_in");
 
 	// Vertex::m_user begin: 1 indicates new edge, no more processing

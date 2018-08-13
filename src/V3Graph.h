@@ -27,6 +27,7 @@
 #include <vector>
 #include <algorithm>
 
+class FileLine;
 class V3Graph;
 class V3GraphVertex;
 class V3GraphEdge;
@@ -155,6 +156,12 @@ public:
     /// Remove any redundant edges, weights become SUM of any other weight
     void removeRedundantEdgesSum(V3EdgeFuncP edgeFuncp);
 
+    /// Remove any transitive edges.  E.g. if have edges A->B, B->C, and A->C
+    /// then A->C is a "transitive" edge; it's implied by the first two
+    /// (assuming the DAG is a dependency graph.)
+    /// This algorithm can be expensive.
+    void removeTransitiveEdges();
+
     /// Call loopsVertexCb on any one loop starting where specified
     void reportLoops(V3EdgeFuncP edgeFuncp, V3GraphVertex* vertexp);
 
@@ -171,7 +178,7 @@ public:
     static void selfTest();
 
     // CALLBACKS
-    virtual void loopsMessageCb(V3GraphVertex* vertexp) { v3fatalSrc("Loops detected in graph: "<<vertexp); }
+    virtual void loopsMessageCb(V3GraphVertex* vertexp);
     virtual void loopsVertexCb(V3GraphVertex* vertexp);
 };
 
@@ -217,6 +224,7 @@ public:
     virtual string dotStyle() const { return ""; }
     virtual string dotName() const { return ""; }
     virtual uint32_t rankAdder() const { return 1; }
+    virtual FileLine* fileline() const { return NULL; }  // NULL for unknown
     virtual int sortCmp(const V3GraphVertex* rhsp) const {
 	// LHS goes first if of lower rank, or lower fanout
 	if (m_rank < rhsp->m_rank) return -1;
@@ -247,7 +255,14 @@ public:
     V3GraphEdge* beginp(GraphWay way) const {
         return way.forward() ? outBeginp() : inBeginp(); }
     // METHODS
-    void	rerouteEdges(V3Graph* graphp);	///< Edges are routed around this vertex to point from "from" directly to "to"
+    /// Error reporting
+    void v3errorEnd(std::ostringstream& str) const;
+    void v3errorEndFatal(std::ostringstream& str) const;
+    /// Edges are routed around this vertex to point from "from" directly to "to"
+    void rerouteEdges(V3Graph* graphp);
+    /// Find the edge connecting ap and bp, where bp is wayward from ap.
+    /// If edge is not found returns NULL. O(edges) performance.
+    V3GraphEdge* findConnectingEdgep(GraphWay way, const V3GraphVertex* waywardp);
 };
 
 std::ostream& operator<<(std::ostream& os, V3GraphVertex* vertexp);

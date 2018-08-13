@@ -30,6 +30,7 @@
 
 #include "V3Global.h"
 #include "V3GraphAlg.h"
+#include "V3GraphPathChecker.h"
 
 //######################################################################
 //######################################################################
@@ -121,7 +122,7 @@ private:
     }
 public:
     GraphRemoveRedundant(V3Graph* graphp, V3EdgeFuncP edgeFuncp, bool sumWeights)
-	: GraphAlg(graphp, edgeFuncp), m_sumWeights(sumWeights) {
+	: GraphAlg<>(graphp, edgeFuncp), m_sumWeights(sumWeights) {
 	main();
     }
     ~GraphRemoveRedundant() {}
@@ -132,6 +133,46 @@ void V3Graph::removeRedundantEdges(V3EdgeFuncP edgeFuncp) {
 }
 void V3Graph::removeRedundantEdgesSum(V3EdgeFuncP edgeFuncp) {
     GraphRemoveRedundant (this, edgeFuncp, true);
+}
+
+//######################################################################
+//######################################################################
+// Algorithms - remove transitive
+
+class GraphAlgRemoveTransitiveEdges : GraphAlg<> {
+public:
+    explicit GraphAlgRemoveTransitiveEdges(V3Graph* graphp)
+        : GraphAlg<>(graphp, NULL) {}
+    void go() {
+        GraphPathChecker checker(m_graphp);
+        for (V3GraphVertex* vxp = m_graphp->verticesBeginp();
+             vxp; vxp = vxp->verticesNextp()) {
+            V3GraphEdge* deletep = NULL;
+            for (V3GraphEdge* edgep = vxp->outBeginp();
+                 edgep; edgep = edgep->outNextp()) {
+                if (deletep) {
+                    deletep->unlinkDelete(); deletep = NULL;
+                }
+                // It should be safe to modify the graph, despite using
+                // the GraphPathChecker, as none of the modifications will
+                // change what can be reached from what, nor should they
+                // change the rank or CP of any node.
+                if (checker.isTransitiveEdge(edgep)) {
+                    deletep = edgep;
+                }
+            }
+            if (deletep) {
+                deletep->unlinkDelete(); VL_DANGLING(deletep);
+            }
+        }
+    }
+private:
+    VL_DEBUG_FUNC;  // Declare debug()
+    VL_UNCOPYABLE(GraphAlgRemoveTransitiveEdges);
+};
+
+void V3Graph::removeTransitiveEdges() {
+    GraphAlgRemoveTransitiveEdges(this).go();
 }
 
 //######################################################################
@@ -169,7 +210,7 @@ private:
     }
 public:
     GraphAlgWeakly(V3Graph* graphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	main();
     }
     ~GraphAlgWeakly() {}
@@ -254,7 +295,7 @@ private:
     }
 public:
     GraphAlgStrongly(V3Graph* graphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	m_currentDfs = 0;
 	main();
     }
@@ -307,7 +348,7 @@ private:
     }
 public:
     GraphAlgRank(V3Graph* graphp, V3EdgeFuncP edgeFuncp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	main();
     }
     ~GraphAlgRank() {}
@@ -365,7 +406,7 @@ private:
     }
 public:
     GraphAlgRLoops(V3Graph* graphp, V3EdgeFuncP edgeFuncp, V3GraphVertex* vertexp)
-	: GraphAlg(graphp, edgeFuncp) {
+	: GraphAlg<>(graphp, edgeFuncp) {
 	m_done = false;
 	main(vertexp);
     }
@@ -412,7 +453,7 @@ private:
 public:
     GraphAlgSubtrees(V3Graph* graphp, V3Graph* loopGraphp,
 		     V3EdgeFuncP edgeFuncp, V3GraphVertex* vertexp)
-	: GraphAlg(graphp, edgeFuncp), m_loopGraphp (loopGraphp) {
+	: GraphAlg<>(graphp, edgeFuncp), m_loopGraphp (loopGraphp) {
 	// Vertex::m_userp - New vertex if we have seen this vertex already
 	// Edge::m_userp - New edge if we have seen this edge already
 	m_graphp->userClearVertices();
@@ -532,7 +573,7 @@ double V3Graph::orderDFSIterate(V3GraphVertex* vertexp) {
     // Compute fanouts of each node
     // If forward edge, don't double count that fanout
     if (vertexp->user() == 2) return vertexp->fanout();  // Already processed it
-    if (vertexp->user() == 1) v3fatalSrc("Loop found, backward edges should be dead");
+    if (vertexp->user() == 1) vertexp->v3fatalSrc("Loop found, backward edges should be dead");
     vertexp->user(1);
     double fanout = 0;
     for (V3GraphEdge* edgep = vertexp->outBeginp(); edgep; edgep = edgep->outNextp()) {

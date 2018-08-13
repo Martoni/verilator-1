@@ -97,6 +97,7 @@ public:
 	UNDRIVEN,	// No drivers
 	UNOPT,		// Unoptimizable block
 	UNOPTFLAT,	// Unoptimizable block after flattening
+        UNOPTTHREADS,   // Thread partitioner unable to fill all requested threads
 	UNPACKED,	// Unsupported unpacked
 	UNSIGNED,	// Comparison is constant due to unsigned arithmetic
 	UNUSED,		// No receivers
@@ -130,7 +131,7 @@ public:
 	    "ALWCOMBORDER", "ASSIGNDLY", "ASSIGNIN",
 	    "BLKANDNBLK", "BLKLOOPINIT", "BLKSEQ", "BSSPACE",
 	    "CASEINCOMPLETE", "CASEOVERLAP", "CASEWITHX", "CASEX", "CDCRSTLOGIC", "CLKDATA",
-	    "CMPCONST", "COLONPLUS", "COMBDLY", "DEFPARAM", "DECLFILENAME",
+            "CMPCONST", "COLONPLUS", "COMBDLY", "DEFPARAM", "DECLFILENAME",
 	    "ENDLABEL", "GENCLK",
 	    "IFDEPTH", "IMPERFECTSCH", "IMPLICIT", "IMPURE",
             "INCABSPATH", "INFINITELOOP", "INITIALDLY",
@@ -139,7 +140,8 @@ public:
 	    "PINMISSING", "PINNOCONNECT", "PINCONNECTEMPTY",
 	    "REALCVT", "REDEFMACRO",
 	    "SELRANGE", "STMTDLY", "SYMRSVDWORD", "SYNCASYNCNET",
-	    "UNDRIVEN", "UNOPT", "UNOPTFLAT", "UNPACKED", "UNSIGNED", "UNUSED",
+            "UNDRIVEN", "UNOPT", "UNOPTFLAT", "UNOPTTHREADS",
+            "UNPACKED", "UNSIGNED", "UNUSED",
 	    "USERERROR", "USERFATAL", "USERINFO", "USERWARN",
 	    "VARHIDDEN", "WIDTH", "WIDTHCONCAT",
 	    " MAX"
@@ -154,7 +156,7 @@ public:
     // Later -Werror- options may make more of these.
     bool pretendError() const { return ( m_e==ASSIGNIN || m_e==BLKANDNBLK
 					 || m_e==BLKLOOPINIT
-					 || m_e==IMPURE || m_e==MODDUP); }
+					 || m_e==IMPURE); }
     // Warnings to mention manual
     bool mentionManual() const { return ( m_e==EC_FATALSRC || m_e==SYMRSVDWORD
 					  || pretendError() ); }
@@ -277,6 +279,10 @@ inline void v3errorEndFatal(std::ostringstream& sstr) { V3Error::v3errorEnd(sstr
 #define v3fatal(msg) v3warnCodeFatal(V3ErrorCode::EC_FATAL, msg)
 // Use this instead of fatal() to mention the source code line.
 #define v3fatalSrc(msg) v3warnCodeFatal(V3ErrorCode::EC_FATALSRC, __FILE__<<":"<<std::dec<<__LINE__<<": "<<msg)
+// Use this when normal v3fatal is called in static method that overrides fileline.
+#define v3fatalStatic(msg) \
+    ::v3errorEndFatal((V3Error::v3errorPrep(V3ErrorCode::EC_FATAL), \
+                       (V3Error::v3errorStr()<<msg), V3Error::v3errorStr()));
 
 #define UINFO(level,stmsg) {if(VL_UNLIKELY(debug()>=(level))) { cout<<"- "<<V3Error::lineStr(__FILE__,__LINE__)<<stmsg; }}
 #define UINFONL(level,stmsg) {if(VL_UNLIKELY(debug()>=(level))) { cout<<stmsg; } }
@@ -292,6 +298,12 @@ inline void v3errorEndFatal(std::ostringstream& sstr) { V3Error::v3errorEnd(sstr
 #define UASSERT_STATIC(condition,stmsg) \
     { if (VL_UNLIKELY(!(condition))) { \
             std::cerr<<"Internal Error: "<<__FILE__<<":"<<std::dec<<__LINE__<<":"<<(stmsg)<<std::endl; abort(); } }
+// Check self test values for expected value.  Safe from side-effects.
+// Type argument can be removed when go to C++11 (use auto).
+#define UASSERT_SELFTEST(Type,got,exp) \
+    do { Type g = (got); Type e = (exp); \
+         UASSERT(g==e, "Self-test failed '" #got "==" #exp "'"" got=" \
+                 <<g<<" expected="<<e); } while(0)
 
 #define V3ERROR_NA { v3error("Internal: Unexpected Call"); v3fatalSrc("Unexpected Call"); }
 

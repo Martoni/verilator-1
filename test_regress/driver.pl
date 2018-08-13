@@ -45,6 +45,7 @@ our %All_Scenarios
        nc    => ["simulator", "nc"],
        vcs   => ["simulator", "vcs"],
        vlt   => ["simulator", "vlt_all", "vlt"],
+       vltmt => ["simulator", "vlt_all", "vltmt"],
     );
 
 #======================================================================
@@ -104,6 +105,7 @@ if (! GetOptions (
           "ms!"         => sub { $opt_scenarios{ms} = $_[1]; },
           "nc!"         => sub { $opt_scenarios{nc} = $_[1]; },
           "vlt!"        => sub { $opt_scenarios{vlt} = $_[1]; },
+          "vltmt!"      => sub { $opt_scenarios{vltmt} = $_[1]; },
           "vcs!"        => sub { $opt_scenarios{vcs} = $_[1]; },
           "<>"          => \&parameter,
     )) {
@@ -322,6 +324,7 @@ sub new {
     $self->{scenario} ||= "ghdl" if $self->{ghdl};
     $self->{scenario} ||= "vcs" if $self->{vcs};
     $self->{scenario} ||= "vlt" if $self->{vlt};
+    $self->{scenario} ||= "vltmt" if $self->{vltmt};
     $self->{scenario} ||= "nc" if $self->{nc};
     $self->{scenario} ||= "ms" if $self->{ms};
     $self->{scenario} ||= "iv" if $self->{iv};
@@ -407,6 +410,7 @@ sub new {
 	ms_run_flags => [split(/\s+/,"-lib $self->{obj_dir}/work -c -do 'run -all;quit' ")],
 	# Verilator
 	vlt => 0,
+        vltmt => 0,
 	verilator_flags => ["-cc",
 			    "-Mdir $self->{obj_dir}",
 			    "-OD",  # As currently disabled unless -O3
@@ -420,7 +424,7 @@ sub new {
 	%$self};
     bless $self, $class;
 
-    $self->{vlt_all} = $self->{vlt};  # Any Verilator scenario
+    $self->{vlt_all} = $self->{vlt} || $self->{vltmt};  # Any Verilator scenario
 
     $self->{VM_PREFIX} ||= "V".$self->{name};
     $self->{stats} ||= "$self->{obj_dir}/V".$self->{name}."__stats.txt";
@@ -591,9 +595,10 @@ sub compile_vlt_flags {
     my @verilator_flags = @{$param{verilator_flags}};
     unshift @verilator_flags, "--gdb" if $opt_gdb;
     unshift @verilator_flags, "--gdbbt" if $opt_gdbbt;
-    unshift @verilator_flags, @Opt_Driver_Verilator_Flags;
     unshift @verilator_flags, "--x-assign unique";  # More likely to be buggy
     unshift @verilator_flags, "--trace" if $opt_trace;
+    unshift @verilator_flags, "--threads 3" if $param{vltmt};
+    unshift @verilator_flags, "--debug-partition" if $param{vltmt};
     if (defined $opt_optimize) {
 	my $letters = "";
 	if ($opt_optimize =~ /[a-zA-Z]/) {
@@ -615,6 +620,9 @@ sub compile_vlt_flags {
 		   @{$param{verilator_flags3}},
 		   @{$param{v_flags}},
 		   @{$param{v_flags2}},
+                   # Flags from driver cmdline override default flags and
+                   # flags from the test itself
+                   @Opt_Driver_Verilator_Flags,
 		   $param{top_filename},
 		   @{$param{v_other_filenames}},
 		   ($param{stdout_filename}?"> ".$param{stdout_filename}:""),
@@ -743,6 +751,11 @@ sub compile {
 	    $self->skip("Test requires SystemC; ignore error since not installed\n");
 	    return 1;
 	}
+
+        if ($self->{vltmt} && !$self->cfg_with_threaded) {
+            $self->skip("Test requires Verilator configured with threads\n");
+            return 1;
+        }
 
 	if (!$param{fails} && $param{verilator_make_gcc}
 	    && $param{make_main}) {
@@ -1171,7 +1184,7 @@ sub _make_main {
     print $fh "$VM_PREFIX * topp;\n";
     if (!$self->sc) {
 	print $fh "vluint64_t main_time = false;\n";
-	print $fh "double sc_time_stamp () {\n";
+        print $fh "double sc_time_stamp() {\n";
 	print $fh "    return main_time;\n";
 	print $fh "}\n";
     }
@@ -1203,7 +1216,7 @@ sub _make_main {
 	print $fh "int sc_main(int argc, char **argv) {\n";
 	print $fh "    sc_signal<bool> fastclk;\n" if $self->{inputs}{fastclk};
 	print $fh "    sc_signal<bool> clk;\n"  if $self->{inputs}{clk};
-	print $fh "    sc_time sim_time ($self->{sim_time}, SC_NS);\n";
+        print $fh "    sc_time sim_time($self->{sim_time}, SC_NS);\n";
     } else {
 	print $fh "int main(int argc, char **argv, char **env) {\n";
 	print $fh "    double sim_time = $self->{sim_time};\n";
@@ -1212,7 +1225,7 @@ sub _make_main {
     print $fh "    Verilated::debug(".($self->{verilated_debug}?1:0).");\n";
     print $fh "    srand48(5);\n";  # Ensure determinism
     print $fh "    Verilated::randReset(".$self->{verilated_randReset}.");\n" if defined $self->{verilated_randReset};
-    print $fh "    topp = new $VM_PREFIX (\"top\");\n";
+    print $fh "    topp = new $VM_PREFIX(\"top\");\n";
     my $set;
     if ($self->sc) {
 	print $fh "    topp->fastclk(fastclk);\n" if $self->{inputs}{fastclk};
@@ -1229,10 +1242,10 @@ sub _make_main {
 	$fh->print("    Verilated::traceEverOn(true);\n");
         $fh->print("    VerilatedVcdC* tfp = new VerilatedVcdC;\n") if !$self->sc;
         $fh->print("    VerilatedVcdSc* tfp = new VerilatedVcdSc;\n") if $self->sc;
-	$fh->print("    topp->trace (tfp, 99);\n");
-	$fh->print("    tfp->open (\"$self->{obj_dir}/simx.vcd\");\n");
+        $fh->print("    topp->trace(tfp, 99);\n");
+        $fh->print("    tfp->open(\"$self->{obj_dir}/simx.vcd\");\n");
 	if ($self->{trace} && !$self->sc) {
-	    $fh->print("	if (tfp) tfp->dump (main_time);\n");
+            $fh->print("    if (tfp) tfp->dump (main_time);\n");
 	}
 	$fh->print("#endif\n");
     }
@@ -1260,19 +1273,19 @@ sub _make_main {
     for (my $i=0; $i<5; $i++) {
 	my $action = 0;
 	if ($self->{inputs}{fastclk}) {
-	    print $fh "	${set}fastclk=!${set}fastclk;\n";
+            print $fh "        ${set}fastclk=!${set}fastclk;\n";
 	    $action = 1;
 	}
 	if ($i==0 && $self->{inputs}{clk}) {
-	    print $fh "	${set}clk=!${set}clk;\n";
+            print $fh "        ${set}clk=!${set}clk;\n";
 	    $action = 1;
 	}
 	if ($self->{savable}) {
-	    $fh->print("	if (sc_time_stamp() == save_time && save_time) {\n");
-	    $fh->print("	    save_model(\"$self->{obj_dir}/saved.vltsv\");\n");
-	    $fh->print("	    printf(\"Exiting after save_model\\n\");\n");
-	    $fh->print("	    exit(0);\n");
-	    $fh->print("	}\n");
+            $fh->print("        if (sc_time_stamp() == save_time && save_time) {\n");
+            $fh->print("            save_model(\"$self->{obj_dir}/saved.vltsv\");\n");
+            $fh->print("            printf(\"Exiting after save_model\\n\");\n");
+            $fh->print("            exit(0);\n");
+            $fh->print("        }\n");
 	}
 	_print_advance_time($self, $fh, 1, $action);
     }
@@ -1289,7 +1302,7 @@ sub _make_main {
     }
     if ($self->{trace}) {
 	$fh->print("#if VM_TRACE\n");
-	$fh->print("	if (tfp) tfp->close();\n");
+        $fh->print("    if (tfp) tfp->close();\n");
 	$fh->print("#endif //VM_TRACE\n");
     }
     $fh->print("\n");
@@ -1312,20 +1325,20 @@ sub _print_advance_time {
 
     if ($self->sc) {
 	print $fh "#if (SYSTEMC_VERSION>=20070314)\n";
-	print $fh "	sc_start(${time},SC_NS);\n";
+        print $fh "        sc_start(${time},SC_NS);\n";
 	print $fh "#else\n";
-	print $fh "	sc_start(${time});\n";
+        print $fh "        sc_start(${time});\n";
 	print $fh "#endif\n";
     } else {
 	if ($action) {
-	    print $fh "	${set}eval();\n";
+            print $fh "        ${set}eval();\n";
 	    if ($self->{trace} && !$self->sc) {
 		$fh->print("#if VM_TRACE\n");
-		$fh->print("	if (tfp) tfp->dump (main_time);\n");
+                $fh->print("        if (tfp) tfp->dump (main_time);\n");
 		$fh->print("#endif //VM_TRACE\n");
 	    }
 	}
-	print $fh "	main_time += ${time};\n";
+        print $fh "        main_time += ${time};\n";
     }
 }
 
@@ -1514,8 +1527,8 @@ sub verilator_version {
 sub files_identical {
     my $fn1 = shift;
     my $fn2 = shift;
-    my $f1 = IO::File->new ("<$fn1"); if (!$f1) { warn "%Error: $! $fn1\n"; return 0; }
-    my $f2 = IO::File->new ("<$fn2"); if (!$f2) { warn "%Error: $! $fn2\n"; return 0; }
+    my $f1 = IO::File->new("<$fn1"); if (!$f1) { warn "%Error: $! $fn1\n"; return 0; }
+    my $f2 = IO::File->new("<$fn2"); if (!$f2) { warn "%Error: $! $fn2\n"; return 0; }
     my @l1 = $f1->getlines();
     my @l2 = $f2->getlines();
     my $nl = $#l1;  $nl = $#l2 if ($#l2 > $nl);
@@ -2043,7 +2056,11 @@ Run Synopsys VCS simulator tests.
 
 =item --vlt
 
-Run Verilator tests.  Default unless another scenario flag is provided.
+Run Verilator tests in single-threaded mode.  Default unless another scenario flag is provided.
+
+=item --vltmt
+
+Run Verilator tests in multithreaded mode.
 
 =back
 

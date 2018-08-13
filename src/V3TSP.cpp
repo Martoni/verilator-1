@@ -168,11 +168,11 @@ public:
         // nodes.
         PendingEdgeSet pendingEdges(cmp);
 
-        vluint32_t vert_ct = 0;
+        vluint32_t vertCount = 0;
         for (V3GraphVertex* vxp = verticesBeginp();
              vxp; vxp = vxp->verticesNextp()) {
             mstp->addVertex(castVertexp(vxp)->key());
-            vert_ct++;
+            vertCount++;
         }
 
         // Choose an arbitrary start vertex and visit it;
@@ -225,8 +225,8 @@ public:
             }
         }
 
-        UASSERT(edges_made + 1 == vert_ct, "Algorithm failed");
-        UASSERT(visited_set.size() == vert_ct, "Algorithm failed");
+        UASSERT(edges_made + 1 == vertCount, "Algorithm failed");
+        UASSERT(visited_set.size() == vertCount, "Algorithm failed");
     }
 
     // Populate *outp with a minimal perfect matching of *this.
@@ -385,7 +385,7 @@ public:
         if (v3Global.opt.dumpTree()) {
             string filename = v3Global.debugFilename(nameComment)+".txt";
             const vl_unique_ptr<std::ofstream> logp(V3File::new_ofstream(filename));
-            if (logp->fail()) v3fatalSrc("Can't write "<<filename);
+            if (logp->fail()) v3fatal("Can't write "<<filename);
             dumpGraph(*logp, nameComment);
         }
     }

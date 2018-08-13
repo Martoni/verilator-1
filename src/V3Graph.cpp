@@ -118,6 +118,40 @@ uint32_t V3GraphVertex::outHash() const {
     return hash;
 }
 
+V3GraphEdge* V3GraphVertex::findConnectingEdgep(GraphWay way,
+                                                const V3GraphVertex* waywardp) {
+    // O(edges) linear search. Searches search both nodes' edge lists in
+    // parallel.  The lists probably aren't _both_ huge, so this is
+    // unlikely to blow up even on fairly nasty graphs.
+    GraphWay inv = way.invert();
+    V3GraphEdge* aedgep = this->beginp(way);
+    V3GraphEdge* bedgep = waywardp->beginp(inv);
+    while (aedgep && bedgep) {
+        if (aedgep->furtherp(way) == waywardp) return aedgep;
+        if (bedgep->furtherp(inv) == this) return bedgep;
+        aedgep = aedgep->nextp(way);
+        bedgep = bedgep->nextp(inv);
+    }
+    return NULL;
+}
+
+void V3GraphVertex::v3errorEnd(std::ostringstream& str) const {
+    std::ostringstream nsstr;
+    nsstr<<str.str();
+    if (debug()) {
+        nsstr<<endl;
+        nsstr<<"-vertex: "<<this<<endl;
+    }
+    if (!fileline()) {
+        V3Error::v3errorEnd(nsstr);
+    } else {
+        fileline()->v3errorEnd(nsstr);
+    }
+}
+void V3GraphVertex::v3errorEndFatal(std::ostringstream& str) const {
+    v3errorEnd(str); assert(0);
+}
+
 std::ostream& operator<<(std::ostream& os, V3GraphVertex* vertexp) {
     os<<"  VERTEX="<<vertexp->name();
     if (vertexp->rank()) os<<" r"<<vertexp->rank();
@@ -239,6 +273,10 @@ void V3Graph::clearColors() {
 //======================================================================
 // Dumping
 
+void V3Graph::loopsMessageCb(V3GraphVertex* vertexp) {
+    vertexp->v3fatalSrc("Loops detected in graph: "<<vertexp);
+}
+
 void V3Graph::loopsVertexCb(V3GraphVertex* vertexp) {
     // Needed here as V3GraphVertex<< isn't defined until later in header
     std::cerr<<"-Info-Loop: "<<(void*)(vertexp)<<" "<<vertexp<<endl;
@@ -289,7 +327,7 @@ void V3Graph::dumpDotFile(const string& filename, bool colorAsSubgraph) const {
     // This generates a file used by graphviz, http://www.graphviz.org
     // "hardcoded" parameters:
     const vl_unique_ptr<std::ofstream> logp (V3File::new_ofstream(filename));
-    if (logp->fail()) v3fatalSrc("Can't write "<<filename);
+    if (logp->fail()) v3fatal("Can't write "<<filename);
 
     // Header
     *logp<<"digraph v3graph {\n";

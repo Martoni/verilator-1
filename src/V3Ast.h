@@ -29,20 +29,28 @@
 #include <vector>
 #include <cmath>
 #include <map>
+#include VL_INCLUDE_UNORDERED_SET
 
 #include "V3Ast__gen_classes.h"	// From ./astgen
 // Things like:
 //   class V3AstNode;
+
+// Forward declarations
+class V3Graph;
+class ExecMTask;
 
 // Hint class so we can choose constructors
 class VFlagLogicPacked {};
 class VFlagBitPacked {};
 class VFlagChildDType {};  // Used by parser.y to select constructor that sets childDType
 
-// For broken() function, return error string if have a match
-#define BROKEN_RTN(test) do { if (VL_UNLIKELY(test)) return # test; } while(0)
+// Used as key for another map, needs operator<, hence not an unordered_set
+typedef std::set<int> MTaskIdSet;  // Set of mtaskIds for Var sorting
 
 //######################################################################
+
+// For broken() function, return error string if have a match
+#define BROKEN_RTN(test) do { if (VL_UNLIKELY(test)) return # test; } while(0)
 
 // (V)erilator (N)ode is: True if AstNode is of a a given AstType
 #define VN_IS(nodep,nodetypename) (AstNode::privateIs ## nodetypename(nodep))
