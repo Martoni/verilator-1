@@ -369,6 +369,17 @@ public:
     return NULL;
   }
 
+  virtual antlrcpp::Any visitSequence_of_statements(vhdlParser::Sequence_of_statementsContext *ctx) override {
+    AstNode *firstNode = visitSequential_statement(ctx->sequential_statement()[0]);
+    AstNode *prevNode = firstNode;
+    for (int i = 1; i < ctx->sequential_statement().size(); ++i) {
+      AstNode *curNode = visitSequential_statement(ctx->sequential_statement()[i]);
+      prevNode->addNext(curNode);
+      prevNode = curNode;
+    }
+    return (AstNode *)firstNode;
+  }
+
   virtual antlrcpp::Any visitSignal_assignment_statement(vhdlParser::Signal_assignment_statementContext *ctx) override {
     FileLine *flAssign = new FileLine(m_filename, 0);
     AstAssignDly *assign = new AstAssignDly(flAssign, visitTarget(ctx->target()), visitWaveform(ctx->waveform()));
